@@ -1,0 +1,77 @@
+version: "3.3"
+services:
+  elasticsearch:
+    environment:
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - network.host=0.0.0.0
+      - discovery.zen.ping.unicast.hosts=elasticsearch      
+      - xpack.security.enabled=false
+      - xpack.monitoring.enabled=false
+      - xpack.ml.enabled=false
+      - xpack.graph.enabled=false
+      - xpack.watcher.enabled=false
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.1.1
+    ulimits:
+      memlock: -1
+      nofile:
+        hard: 65536
+        soft: 65536
+      nproc: 65538
+    ports:
+      - "9200:9200"
+    volumes:
+      - /usr/share/elasticsearch/data
+    networks:
+      - elk
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.elkhost == true
+  kibana:
+    image: docker.elastic.co/kibana/kibana:6.1.1
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    networks:
+      - elk
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.elkhost == true
+  logstash:
+    hostname: logstash
+    image: bxtp4p/logstash:6.1.1
+    ports:
+        - "5044:5044/tcp"
+    networks:
+      - elk
+    deploy:
+      mode: replicated
+      replicas: 2
+    environment:
+      ES_HOSTS: elasticsearch
+  filebeat-win:
+    image: bxtp4p/filebeat:6.1.1-windowsservercore-10.0.14393.1884
+    networks:
+      - elk
+    environment:
+      - DOCKER_HOST=${COMPUTERNAME}
+      - KIBANA_HOST=http://172.16.1.151:5601
+      - ES_HOSTS='172.16.1.151:9200'
+      - LOGSTASH_HOSTS='172.16.1.151:5044'
+    volumes:
+      - type: bind
+        source: C:\\programdata\\docker\\containers\\
+        target: C:\\ContainerLogs\\
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.platform.os == windows
+networks:
+  elk:

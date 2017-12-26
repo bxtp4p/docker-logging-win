@@ -1,0 +1,15 @@
+setup.kibana.host: "${KIBANA_HOST}"
+setup.dashboards.enabled: true
+
+filebeat.prospectors:
+- type: docker
+  enabled: true
+  paths: 
+    - C:\ContainerLogs\*\*.log
+  fields:
+    docker.host: ${DOCKER_HOST}
+  fields_under_root: true
+
+output.logstash:
+  hosts: [${LOGSTASH_HOSTS}]
+  index: filebeat-container
